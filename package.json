@@ -1,0 +1,11 @@
+{
+  "name": "cors-proxy",
+  "version": "0.0.0",
+  "description": "Personal Proxy Server",
+  "repository": "git@github.com:kurrx/cors-proxy.git",
+  "author": {
+    "name": "Kurbanali Ruslan",
+    "email": "kurr.eax@gmail.com",
+    "url": "https://github.com/kurrx"
+  }
+}
