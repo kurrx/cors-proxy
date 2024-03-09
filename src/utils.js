@@ -1,4 +1,6 @@
 import { URL } from 'node:url'
+import setCookieParser from 'set-cookie-parser'
+import cookie from 'cookie'
 
 /**
  * Check if a value is a function
@@ -49,9 +51,9 @@ export function toStringArray(value, defaultValue) {
 /**
  * Normalizes options to ensure they are valid
  *
- * @param {import('./index.js').Options} defaultOptions Options
- * @param {import('./index.js').Options} options Options
- * @returns {import('./index.js').Options} Normalized options
+ * @param {import('./types.js').Options} defaultOptions Options
+ * @param {import('./types.js').CreateServerOptions} options Options
+ * @returns {import('./types.js').Options} Normalized options
  */
 export function normalizeOptions(defaultOptions, options) {
   Object.keys(defaultOptions).forEach(key => {
@@ -60,19 +62,9 @@ export function normalizeOptions(defaultOptions, options) {
     }
   })
 
-  // Normalize isProxyHttps
-  if (!isBoolean(options.isProxyHttps)) {
-    options.isProxyHttps = defaultOptions.isProxyHttps
-  }
-
-  // Normalize handleInitialRequest
-  if (!isFunction(options.handleInitialRequest) && options.handleInitialRequest !== null) {
-    options.handleInitialRequest = defaultOptions.handleInitialRequest
-  }
-
-  // Normalize handleResponse
-  if (!isFunction(options.handleResponse) && options.handleResponse !== null) {
-    options.handleResponse = defaultOptions.handleResponse
+  // Normalize proxyHttps
+  if (!isBoolean(options.proxyHttps)) {
+    options.proxyHttps = defaultOptions.proxyHttps
   }
 
   // Normalize maxRedirects
@@ -80,26 +72,11 @@ export function normalizeOptions(defaultOptions, options) {
     options.maxRedirects = defaultOptions.maxRedirects
   }
 
-  // Normalize allowFollowRedirect
-  if (!isFunction(options.allowFollowRedirect) && !isBoolean(options.allowFollowRedirect)) {
-    options.allowFollowRedirect = defaultOptions.allowFollowRedirect
-  }
-
-  // Normalize originBlacklist
-  options.originBlacklist = toStringArray(options.originBlacklist, defaultOptions.originBlacklist)
-
   // Normalize originWhitelist
   options.originWhitelist = toStringArray(options.originWhitelist, defaultOptions.originWhitelist)
 
-  // Normalize allowEmptyOrigin
-  if (!isFunction(options.allowEmptyOrigin) && !isBoolean(options.allowEmptyOrigin)) {
-    options.allowEmptyOrigin = defaultOptions.allowEmptyOrigin
-  }
-
-  // Normalize checkRateLimit
-  if (!isFunction(options.checkRateLimit) && options.checkRateLimit !== null) {
-    options.checkRateLimit = defaultOptions.checkRateLimit
-  }
+  // Normalize originBlacklist
+  options.originBlacklist = toStringArray(options.originBlacklist, defaultOptions.originBlacklist)
 
   // Normalize redirectSameOrigin
   if (!isBoolean(options.redirectSameOrigin)) {
@@ -132,15 +109,40 @@ export function normalizeOptions(defaultOptions, options) {
     options.corsMaxAge = defaultOptions.corsMaxAge
   }
 
+  // Normalize handleInitialRequest
+  if (!isFunction(options.handleInitialRequest) && options.handleInitialRequest !== null) {
+    options.handleInitialRequest = defaultOptions.handleInitialRequest
+  }
+
+  // Normalize isEmptyOriginAllowed
+  if (!isFunction(options.isEmptyOriginAllowed) && !isBoolean(options.isEmptyOriginAllowed)) {
+    options.isEmptyOriginAllowed = defaultOptions.isEmptyOriginAllowed
+  }
+
+  // Normalize handleResponse
+  if (!isFunction(options.handleResponse) && options.handleResponse !== null) {
+    options.handleResponse = defaultOptions.handleResponse
+  }
+
+  // Normalize isAllowedToFollowRedirect
+  if (!isFunction(options.isAllowedToFollowRedirect) && !isBoolean(options.isAllowedToFollowRedirect)) {
+    options.isAllowedToFollowRedirect = defaultOptions.isAllowedToFollowRedirect
+  }
+
+  // Normalize checkRateLimit
+  if (!isFunction(options.checkRateLimit) && options.checkRateLimit !== null) {
+    options.checkRateLimit = defaultOptions.checkRateLimit
+  }
+
   return options
 }
 
 /**
  * Adds CORS headers to the response headers.
  *
- * @param {object} headers Response headers
- * @param {import('node:http').IncomingMessage & import('./handler.js').RequestState} req Request
- * @returns {object} Response headers
+ * @param {import('./types.js').Headers} headers Response headers
+ * @param {import('./types.js').Request} req Request
+ * @returns {import('./types.js').Headers} Response headers
  */
 export function withCORS(headers, req) {
   headers['access-control-allow-origin'] = '*'
@@ -166,7 +168,7 @@ export function withCORS(headers, req) {
  * Parse a URL string
  *
  * @param {string} url URL string
- * @returns {URL|null} URL instance or null
+ * @returns {URL | null} URL instance or null
  */
 export function parseURL(url) {
   try {
@@ -174,4 +176,34 @@ export function parseURL(url) {
   } catch {
     return null
   }
+}
+
+/**
+ * Deletes all `Set-Cookie` headers and rewrites to `X-Proxy-Set-Cookie-{number}` headers.
+ *
+ * Where `{number}` is the number from `1` to `X-Proxy-Set-Cookies-Count`.
+ *
+ * **WARNING:** Use this function only if you know what you are doing.
+ * It's not secure to expose cookies sent from target to the client.
+ * I'm using this function because I know that the target is not sending
+ * any sensitive data.
+ *
+ * @param {import('./src/types.js').Headers} headers Headers Object
+ * @returns {void}
+ */
+export function rewriteCookies(headers) {
+  if (!headers['set-cookie']) return
+  if (typeof headers['set-cookie'] === 'string') {
+    headers['set-cookie'] = [headers['set-cookie']]
+    return rewriteCookies(headers)
+  }
+  const cookies = setCookieParser.parse(headers['set-cookie'])
+  headers['x-proxy-set-cookies-count'] = `${cookies.length}`
+  for (let i = 0; i < cookies.length; i++) {
+    const setCookie = cookies[i]
+    headers[`x-proxy-set-cookie-${i + 1}`] = cookie.serialize(setCookie.name, setCookie.value, {
+      expires: setCookie.expires,
+    })
+  }
+  delete headers['set-cookie']
 }

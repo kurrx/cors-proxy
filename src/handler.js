@@ -1,48 +1,22 @@
 import { normalizeOptions, parseURL, withCORS } from './utils.js'
 import { resolve } from 'node:url'
 
-/**
- * @typedef State
- * @property {number} corsMaxAge If set, an Access-Control-Max-Age header with this value (in seconds) will be added.
- * @property {number} maxRedirects Maximum number of redirects to follow
- * @property {import('node:url').URL} location URL to target
- * @property {string} proxyBaseUrl Base URL of the proxy
- * @property {import('./index.js').AllowFollowRedirectChecker|boolean} allowFollowRedirect Allow redirect following if true, or if the function returns true.
- * @property {import('./index.js').ResponseHandler|null} handleResponse Function that will be called on response.
- * @property {Object<string, string>} headers Proxy request headers
- * @property {number} redirectCount_ Number of redirects followed
- */
-/**
- * @typedef RequestState
- * @property {State} proxyState State
- */
-/**
- * @callback RequestHandler
- * @param {import('node:http').IncomingMessage & RequestState} req
- * @param {import('node:http').ServerResponse} res
- * @returns {void}
- */
-
-/**
- * @type {import('./index.js').Options}
- */
+/** @type {import('./types.js').Options} */
 const defaultOptions = {
-  isProxyHttps: false,
-  handleInitialRequest: null,
-  handleResponse: null,
+  proxyHttps: false,
   maxRedirects: 5,
-  allowFollowRedirect: true,
-  originBlacklist: [],
   originWhitelist: [],
-  allowEmptyOrigin: true,
-  checkRateLimit: null,
+  originBlacklist: [],
   redirectSameOrigin: false,
   requireHeaders: [],
   removeHeaders: [],
   addHeaders: {},
   corsMaxAge: 0,
-  onRequest: null,
-  onResponse: null,
+  handleInitialRequest: null,
+  isEmptyOriginAllowed: true,
+  handleResponse: null,
+  isAllowedToFollowRedirect: true,
+  checkRateLimit: null,
 }
 
 /**
@@ -56,18 +30,14 @@ const defaultOptions = {
  * @param {import('http-proxy')} proxy
  * @param {import('node:http').IncomingMessage} proxyReq
  * @param {import('node:http').ServerResponse} proxyRes
- * @param {import('node:http').IncomingMessage & RequestState} req
+ * @param {import('./types.js').Request} req
  * @param {import('node:http').ServerResponse} res
  *
  * @returns {boolean} true if http-proxy should continue to pipe proxyRes to res.
  */
 function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
-  const state = req.proxyState
-  const location = state.location
-  const allowFollowRedirect = state.allowFollowRedirect
-  const proxyBaseUrl = state.proxyBaseUrl
-  const maxRedirects = state.maxRedirects
-  const handleResponse = state.handleResponse
+  const handleResponse = req.proxyState.handleResponse
+  const isAllowedToFollowRedirect = req.proxyState.isAllowedToFollowRedirect
   const statusCode = proxyRes.statusCode
 
   // Handle redirects
@@ -75,21 +45,24 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
     let locationHeader = proxyRes.headers.location
     let parsedLocation
     if (locationHeader) {
-      locationHeader = resolve(location.href, locationHeader)
+      locationHeader = resolve(req.proxyState.location.href, locationHeader)
       parsedLocation = parseURL(locationHeader)
     }
     if (parsedLocation) {
-      const allow = typeof allowFollowRedirect === 'boolean' ? allowFollowRedirect : allowFollowRedirect(parsedLocation)
+      const allow =
+        typeof isAllowedToFollowRedirect === 'boolean'
+          ? isAllowedToFollowRedirect
+          : isAllowedToFollowRedirect(req, res, proxyReq, proxyRes, parsedLocation)
       // Exclude 307 & 308, because they are rare, and require preserving the method + request body
       // Handle redirects within the server, because some clients (e.g. Android Stock Browser)
       // cancel redirects.
       if (allow && [301, 302, 303].includes(statusCode)) {
-        state.redirectCount_ = state.redirectCount_ + 1 || 1
-        if (state.redirectCount_ <= maxRedirects) {
+        req.proxyState.redirectCount_ = req.proxyState.redirectCount_ + 1 || 1
+        if (req.proxyState.redirectCount_ <= req.proxyState.maxRedirects) {
           req.method = 'GET'
           req.headers['content-length'] = '0'
           delete req.headers['content-type']
-          state.location = parsedLocation
+          req.proxyState.location = parsedLocation
 
           // Remove all listeners (=reset events to initial state)
           req.removeAllListeners()
@@ -106,12 +79,12 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
           return false
         }
       }
-      proxyRes.headers.location = proxyBaseUrl + '/' + locationHeader
+      proxyRes.headers.location = req.proxyState.proxyBaseUrl + '/' + locationHeader
     }
   }
 
   // Lifecycle hook
-  if (handleResponse && handleResponse(req, res, proxyReq, proxyRes, location)) {
+  if (handleResponse && handleResponse(req, res, proxyReq, proxyRes, req.proxyState.location)) {
     return true
   }
 
@@ -125,22 +98,20 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
 /**
  * Performs the actual proxy request.
  *
- * @param {import('node:http').IncomingMessage & RequestState} req Incoming request
- * @param {import('node:https').ServerResponse} res Outgoing (proxied) response
+ * @param {import('./types.js').Request} req Incoming request
+ * @param {import('node:http').ServerResponse} res Outgoing (proxied) response
  * @param {import('http-proxy')} proxy Proxy instance
+ * @returns {void}
  */
 function proxyRequest(req, res, proxy) {
-  const state = req.proxyState
-  const location = state.location
-  const headers = state.headers
-  req.url = location.href
+  req.url = req.proxyState.location.href
 
   try {
     proxy.web(req, res, {
       changeOrigin: false,
       prependPath: false,
-      target: location,
-      headers,
+      target: req.proxyState.location,
+      headers: req.proxyState.headers,
       // HACK: Get hold of the proxyReq object, because we need it later.
       // https://github.com/nodejitsu/node-http-proxy/blob/v1.11.1/lib/http-proxy/passes/web-incoming.js#L144
       buffer: {
@@ -182,42 +153,43 @@ function proxyRequest(req, res, proxy) {
  * Create a request handler for the proxy server
  *
  * @param {import('http-proxy')} proxy Proxy instance
- * @param {import('./index.js').Options} options Options
- * @returns {RequestHandler} Request handler
+ * @param {import('./types.js').CreateServerOptions} options Options
+ * @returns {import('./types.js').RequestHandler} Request handler
  */
 function getRequestHandler(proxy, options) {
   const {
-    isProxyHttps,
-    handleInitialRequest,
-    handleResponse,
+    proxyHttps,
     maxRedirects,
-    allowFollowRedirect,
-    originBlacklist,
     originWhitelist,
-    allowEmptyOrigin,
-    checkRateLimit,
+    originBlacklist,
     redirectSameOrigin,
     requireHeaders,
     removeHeaders,
     addHeaders,
     corsMaxAge,
-  } = normalizeOptions(defaultOptions, { ...defaultOptions, ...options })
+    handleInitialRequest,
+    isEmptyOriginAllowed,
+    handleResponse,
+    isAllowedToFollowRedirect,
+    checkRateLimit,
+  } = normalizeOptions(defaultOptions, options)
 
   return (req, res) => {
-    /**
-     * @type {State}
-     */
+    /** @type {import('./types.js').ProxyState} */
     const state = {}
-    state.corsMaxAge = corsMaxAge
-    state.maxRedirects = maxRedirects
+    state.proxyBaseUrl = (proxyHttps ? 'https' : 'http') + '://' + req.headers.host
     state.location = parseURL(req.url.slice(1))
-    state.proxyBaseUrl = (isProxyHttps ? 'https' : 'http') + '://' + req.headers.host
-    state.allowFollowRedirect = allowFollowRedirect
+    state.origin = req.headers.origin || ''
+    state.headers = {}
+    state.redirectCount_ = 0
+    state.maxRedirects = maxRedirects
+    state.corsMaxAge = corsMaxAge
     state.handleResponse = handleResponse
+    state.isAllowedToFollowRedirect = isAllowedToFollowRedirect
     req.proxyState = state
 
     const location = state.location
-    const origin = req.headers.origin || ''
+    const origin = state.origin
     const corsHeaders = withCORS({}, req)
 
     // Pre-flight request. Reply successfully:
@@ -248,7 +220,7 @@ function getRequestHandler(proxy, options) {
 
     // Origin validation
     if (!origin) {
-      const allowed = typeof allowEmptyOrigin === 'boolean' ? allowEmptyOrigin : allowEmptyOrigin(location)
+      const allowed = typeof isEmptyOriginAllowed === 'boolean' ? isEmptyOriginAllowed : isEmptyOriginAllowed(req, res, location)
       if (!allowed) {
         res.writeHead(403, 'Forbidden', corsHeaders)
         res.end('Missing or invalid origin.')
@@ -268,7 +240,7 @@ function getRequestHandler(proxy, options) {
     }
 
     // Rate limit check
-    if (checkRateLimit && checkRateLimit(origin)) {
+    if (checkRateLimit && checkRateLimit(req, res, location, origin)) {
       res.writeHead(429, 'Too Many Requests', corsHeaders)
       res.end('The origin "' + origin + '" has sent too many requests.\n' + rateLimitMessage)
       return
@@ -295,7 +267,6 @@ function getRequestHandler(proxy, options) {
     })
 
     // Set the headers for the proxy request
-    state.headers = {}
     Object.keys(req.headers).forEach(header => {
       header = header.toLowerCase()
       if (header.startsWith('x-proxy-')) {

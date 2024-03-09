@@ -7,10 +7,7 @@ import httpProxy from 'http-proxy'
  * @returns {httpProxy} Proxy instance
  */
 function createProxy(options = {}) {
-  /**
-   * Default http-proxy options
-   * @type {httpProxy.ServerOptions}
-   */
+  /** @type {httpProxy.ServerOptions} */
   const httpProxyOptions = {
     xfwd: false, // Append x-forwarded-* headers
     ...options,
