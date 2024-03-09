@@ -17,9 +17,11 @@
     "serve": "cross-env NODE_ENV=production node index.js"
   },
   "dependencies": {
+    "cookie": "^0.6.0",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "http-proxy": "^1.18.1",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "set-cookie-parser": "^2.6.0"
   }
 }
