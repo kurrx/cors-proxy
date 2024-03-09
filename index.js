@@ -13,10 +13,9 @@ const server = createServer({
   originWhitelist: ORIGIN_WHITELIST,
   originBlacklist: ORIGIN_BLACKLIST,
   redirectSameOrigin: true,
+  removeHeaders: ['origin', 'referer'],
   handleInitialRequest(req, res, location) {
     req.proxyState.videoName = location.searchParams.get('proxy-tv-video-filename')
-    delete req.headers['origin']
-    delete req.headers['referer']
     return false
   },
   isEmptyOriginAllowed(req, res, location) {
