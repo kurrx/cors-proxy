@@ -70,6 +70,11 @@ export function normalizeOptions(defaultOptions, options) {
     options.handleInitialRequest = defaultOptions.handleInitialRequest
   }
 
+  // Normalize handleResponse
+  if (!isFunction(options.handleResponse) && options.handleResponse !== null) {
+    options.handleResponse = defaultOptions.handleResponse
+  }
+
   // Normalize maxRedirects
   if (!isNumber(options.maxRedirects) || options.maxRedirects < 0) {
     options.maxRedirects = defaultOptions.maxRedirects
@@ -125,16 +130,6 @@ export function normalizeOptions(defaultOptions, options) {
   // Normalize corsMaxAge
   if (!isNumber(options.corsMaxAge) || options.corsMaxAge < 0) {
     options.corsMaxAge = defaultOptions.corsMaxAge
-  }
-
-  // Normalize onRequest
-  if (!isFunction(options.onRequest) && options.onRequest !== null) {
-    options.onRequest = defaultOptions.onRequest
-  }
-
-  // Normalize onResponse
-  if (!isFunction(options.onResponse) && options.onResponse !== null) {
-    options.onResponse = defaultOptions.onResponse
   }
 
   return options

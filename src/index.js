@@ -4,8 +4,17 @@ import getRequestHandler from './handler.js'
 
 /**
  * @callback InitialRequestHandler
- * @param {http.IncomingMessage} req
+ * @param {http.IncomingMessage & import('./handler.js').RequestState} req
  * @param {http.ServerResponse} res
+ * @param {import('node:url').URL} location
+ * @returns {boolean}
+ */
+/**
+ * @callback ResponseHandler
+ * @param {http.IncomingMessage & import('./handler.js').RequestState} req
+ * @param {http.ServerResponse} res
+ * @param {http.IncomingMessage} proxyReq
+ * @param {http.ServerResponse} proxyRes
  * @param {import('node:url').URL} location
  * @returns {boolean}
  */
@@ -25,23 +34,10 @@ import getRequestHandler from './handler.js'
  * @returns {string}
  */
 /**
- * @callback OnRequest
- * @param {http.IncomingMessage & import('./handler.js').RequestState} req
- * @param {http.ServerResponse} res
- * @param {import('node:url').URL} location
- */
-/**
- * @callback OnResponse
- * @param {http.IncomingMessage & import('./handler.js').RequestState} req
- * @param {http.ServerResponse} res
- * @param {http.IncomingMessage} proxyReq
- * @param {http.ServerResponse} proxyRes
- * @param {import('node:url').URL} location
- */
-/**
  * @typedef Options
  * @property {boolean} [isProxyHttps] Is server using HTTPS (default: false)
  * @property {InitialRequestHandler|null} [handleInitialRequest] Function that may handle the request instead, by returning a truthy value. (default: null)
+ * @property {ResponseHandler|null} [handleResponse] Function that will be called on each response. (default: null)
  * @property {number} [maxRedirects] Maximum number of redirects to follow (default: 5)
  * @property {AllowFollowRedirectChecker|boolean} [allowFollowRedirect] Allow redirect following if true, or if the function returns true.(default: true)
  * @property {string[]|string} [originBlacklist] Requests from these origins will be blocked. (default: [])
@@ -53,8 +49,6 @@ import getRequestHandler from './handler.js'
  * @property {string[]|string} [removeHeaders] Strip these request headers. (default: [])
  * @property {Object<string, string>} [addHeaders] Set these request headers. (default: {})
  * @property {number} [corsMaxAge] If set, an Access-Control-Max-Age header with this value (in seconds) will be added. (default: 0)
- * @property {OnRequest|null} [onRequest] Function that will be called on each request. (default: null)
- * @property {OnResponse|null} [onResponse] Function that will be called on each response. (default: null)
  * @property {import('http-proxy').ServerOptions} [httpProxyOptions] http-proxy options (default: { xfwd: false })
  */
 

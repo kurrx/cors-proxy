@@ -8,7 +8,7 @@ import { resolve } from 'node:url'
  * @property {import('node:url').URL} location URL to target
  * @property {string} proxyBaseUrl Base URL of the proxy
  * @property {import('./index.js').AllowFollowRedirectChecker|boolean} allowFollowRedirect Allow redirect following if true, or if the function returns true.
- * @property {import('./index.js').OnResponse|null} onResponse Function that will be called on response.
+ * @property {import('./index.js').ResponseHandler|null} handleResponse Function that will be called on response.
  * @property {Object<string, string>} headers Proxy request headers
  * @property {number} redirectCount_ Number of redirects followed
  */
@@ -66,7 +66,7 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
   const allowFollowRedirect = state.allowFollowRedirect
   const proxyBaseUrl = state.proxyBaseUrl
   const maxRedirects = state.maxRedirects
-  const onResponse = state.onResponse
+  const handleResponse = state.handleResponse
   const statusCode = proxyRes.statusCode
 
   // Handle redirects
@@ -109,9 +109,13 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
     }
   }
 
-  if (onResponse) {
-    onResponse(req, res, proxyReq, proxyRes, location)
+  // Lifecycle hook
+  if (handleResponse && handleResponse(req, res, proxyReq, proxyRes, location)) {
+    return true
   }
+
+  // Remove cookies
+  delete proxyRes.headers['set-cookie']
 
   withCORS(proxyRes.headers, req)
   return true
@@ -184,6 +188,7 @@ function getRequestHandler(proxy, options) {
   const {
     isProxyHttps,
     handleInitialRequest,
+    handleResponse,
     maxRedirects,
     allowFollowRedirect,
     originBlacklist,
@@ -195,8 +200,6 @@ function getRequestHandler(proxy, options) {
     removeHeaders,
     addHeaders,
     corsMaxAge,
-    onRequest,
-    onResponse,
   } = normalizeOptions(defaultOptions, { ...defaultOptions, ...options })
 
   return (req, res) => {
@@ -209,17 +212,12 @@ function getRequestHandler(proxy, options) {
     state.location = parseURL(req.url.slice(1))
     state.proxyBaseUrl = (isProxyHttps ? 'https' : 'http') + '://' + req.headers.host
     state.allowFollowRedirect = allowFollowRedirect
-    state.onResponse = onResponse
+    state.handleResponse = handleResponse
     req.proxyState = state
 
     const location = state.location
     const origin = req.headers.origin || ''
     const corsHeaders = withCORS({}, req)
-
-    // Lifecycle hook
-    if (onRequest) {
-      onRequest(req, res, location)
-    }
 
     // Pre-flight request. Reply successfully:
     if (req.method === 'OPTIONS') {
