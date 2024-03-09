@@ -29,6 +29,7 @@ import { resolve } from 'node:url'
 const defaultOptions = {
   isProxyHttps: false,
   handleInitialRequest: null,
+  handleResponse: null,
   maxRedirects: 5,
   allowFollowRedirect: true,
   originBlacklist: [],
