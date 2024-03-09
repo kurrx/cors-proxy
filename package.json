@@ -1,11 +1,25 @@
 {
   "name": "cors-proxy",
-  "version": "0.0.0",
-  "description": "Personal Proxy Server",
+  "version": "0.0.1",
   "repository": "git@github.com:kurrx/cors-proxy.git",
   "author": {
     "name": "Kurbanali Ruslan",
     "email": "kurr.eax@gmail.com",
     "url": "https://github.com/kurrx"
+  },
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">= 20.0.0"
+  },
+  "scripts": {
+    "start": "nodemon index.js",
+    "serve": "cross-env NODE_ENV=production node index.js"
+  },
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "http-proxy": "^1.18.1",
+    "nodemon": "^3.1.0"
   }
 }
