@@ -8,6 +8,7 @@ import { resolve } from 'node:url'
  * @property {import('node:url').URL} location URL to target
  * @property {string} proxyBaseUrl Base URL of the proxy
  * @property {import('./index.js').AllowFollowRedirectChecker|boolean} allowFollowRedirect Allow redirect following if true, or if the function returns true.
+ * @property {import('./index.js').OnResponse|null} onResponse Function that will be called on response.
  * @property {Object<string, string>} headers Proxy request headers
  * @property {number} redirectCount_ Number of redirects followed
  */
@@ -39,6 +40,8 @@ const defaultOptions = {
   removeHeaders: [],
   addHeaders: {},
   corsMaxAge: 0,
+  onRequest: null,
+  onResponse: null,
 }
 
 /**
@@ -63,6 +66,7 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
   const allowFollowRedirect = state.allowFollowRedirect
   const proxyBaseUrl = state.proxyBaseUrl
   const maxRedirects = state.maxRedirects
+  const onResponse = state.onResponse
   const statusCode = proxyRes.statusCode
 
   // Handle redirects
@@ -103,6 +107,10 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
       }
       proxyRes.headers.location = proxyBaseUrl + '/' + locationHeader
     }
+  }
+
+  if (onResponse) {
+    onResponse(req, res, proxyReq, proxyRes, location)
   }
 
   withCORS(proxyRes.headers, req)
@@ -187,6 +195,8 @@ function getRequestHandler(proxy, options) {
     removeHeaders,
     addHeaders,
     corsMaxAge,
+    onRequest,
+    onResponse,
   } = normalizeOptions(defaultOptions, { ...defaultOptions, ...options })
 
   return (req, res) => {
@@ -199,11 +209,17 @@ function getRequestHandler(proxy, options) {
     state.location = parseURL(req.url.slice(1))
     state.proxyBaseUrl = (isProxyHttps ? 'https' : 'http') + '://' + req.headers.host
     state.allowFollowRedirect = allowFollowRedirect
+    state.onResponse = onResponse
     req.proxyState = state
 
     const location = state.location
     const origin = req.headers.origin || ''
     const corsHeaders = withCORS({}, req)
+
+    // Lifecycle hook
+    if (onRequest) {
+      onRequest(req, res, location)
+    }
 
     // Pre-flight request. Reply successfully:
     if (req.method === 'OPTIONS') {
