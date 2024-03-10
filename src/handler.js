@@ -14,9 +14,9 @@ const defaultOptions = {
   corsMaxAge: 0,
   handleInitialRequest: null,
   isEmptyOriginAllowed: true,
+  checkRateLimit: null,
   handleResponse: null,
   isAllowedToFollowRedirect: true,
-  checkRateLimit: null,
 }
 
 /**
@@ -49,6 +49,8 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
       parsedLocation = parseURL(locationHeader)
     }
     if (parsedLocation) {
+      const oldLocation = req.proxyState.location
+      req.proxyState.location = parsedLocation
       const allow =
         typeof isAllowedToFollowRedirect === 'boolean'
           ? isAllowedToFollowRedirect
@@ -62,7 +64,6 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
           req.method = 'GET'
           req.headers['content-length'] = '0'
           delete req.headers['content-type']
-          req.proxyState.location = parsedLocation
 
           // Remove all listeners (=reset events to initial state)
           req.removeAllListeners()
@@ -78,13 +79,15 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
           proxyRequest(req, res, proxy)
           return false
         }
+      } else {
+        req.proxyState.location = oldLocation
       }
       proxyRes.headers.location = req.proxyState.proxyBaseUrl + '/' + locationHeader
     }
   }
 
   // Lifecycle hook
-  if (handleResponse && handleResponse(req, res, proxyReq, proxyRes, req.proxyState.location)) {
+  if (handleResponse && handleResponse(req, res, proxyReq, proxyRes)) {
     return true
   }
 
@@ -169,9 +172,9 @@ function getRequestHandler(proxy, options) {
     corsMaxAge,
     handleInitialRequest,
     isEmptyOriginAllowed,
+    checkRateLimit,
     handleResponse,
     isAllowedToFollowRedirect,
-    checkRateLimit,
   } = normalizeOptions(defaultOptions, options)
 
   return (req, res) => {
@@ -200,7 +203,7 @@ function getRequestHandler(proxy, options) {
     }
 
     // Handle initial request
-    if (handleInitialRequest && handleInitialRequest(req, res, location)) {
+    if (handleInitialRequest && handleInitialRequest(req, res)) {
       return
     }
 
@@ -220,7 +223,7 @@ function getRequestHandler(proxy, options) {
 
     // Origin validation
     if (!origin) {
-      const allowed = typeof isEmptyOriginAllowed === 'boolean' ? isEmptyOriginAllowed : isEmptyOriginAllowed(req, res, location)
+      const allowed = typeof isEmptyOriginAllowed === 'boolean' ? isEmptyOriginAllowed : isEmptyOriginAllowed(req, res)
       if (!allowed) {
         res.writeHead(403, 'Forbidden', corsHeaders)
         res.end('Missing or invalid origin.')
@@ -240,7 +243,7 @@ function getRequestHandler(proxy, options) {
     }
 
     // Rate limit check
-    if (checkRateLimit && checkRateLimit(req, res, location, origin)) {
+    if (checkRateLimit && checkRateLimit(req, res)) {
       res.writeHead(429, 'Too Many Requests', corsHeaders)
       res.end('The origin "' + origin + '" has sent too many requests.\n' + rateLimitMessage)
       return

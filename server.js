@@ -14,11 +14,15 @@ const server = createServer({
   originBlacklist: ORIGIN_BLACKLIST,
   redirectSameOrigin: true,
   removeHeaders: ['origin', 'referer'],
-  handleInitialRequest(req, res, location) {
+  handleInitialRequest(req) {
+    const location = req.proxyState.location
+    if (!location) return false
     req.proxyState.videoName = location.searchParams.get('proxy-tv-video-filename')
     return false
   },
-  isEmptyOriginAllowed(req, res, location) {
+  isEmptyOriginAllowed(req) {
+    const location = req.proxyState.location
+    if (!location) return false
     return location.hostname.endsWith(TV_PROVIDER_HOST) && location.pathname.endsWith('.mp4')
   },
   handleResponse(req, res, proxyReq, proxyRes) {
@@ -29,7 +33,8 @@ const server = createServer({
     }
     return false
   },
-  isAllowedToFollowRedirect(req, res, proxyReq, proxyRes, location) {
+  isAllowedToFollowRedirect(req) {
+    const location = req.proxyState.location
     return !location.hostname.endsWith(TV_PROVIDER_HOST)
   },
 })

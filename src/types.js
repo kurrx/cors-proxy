@@ -9,7 +9,7 @@
 /**
  * @typedef {Object} ProxyState
  * @property {string} proxyBaseUrl Base URL of the proxy
- * @property {URL} location Requested URL
+ * @property {URL | null} location Requested URL
  * @property {string} origin Request origin
  * @property {Headers} headers Request headers
  * @property {number} redirectCount_ Number of redirects followed
@@ -25,7 +25,6 @@
  * @callback RequestCallback
  * @param {Request} req
  * @param {ServerResponse} res
- * @param {URL} location
  * @returns {boolean}
  *
  * @callback ResponseCallback
@@ -33,15 +32,7 @@
  * @param {ServerResponse} res
  * @param {IncomingMessage} proxyReq
  * @param {ServerResponse} proxyRes
- * @param {URL} location
  * @returns {boolean}
- *
- * @callback CheckRateLimitCallback
- * @param {Request} req
- * @param {ServerResponse} res
- * @param {URL} location
- * @param {string} origin
- * @returns {string}
  *
  * @typedef {Object} Options
  * @property {boolean} proxyHttps Is server using HTTPS (you should set `true` if you using NGINX with HTTPS) (default: `false`)
@@ -55,9 +46,9 @@
  * @property {number} corsMaxAge If set, an Access-Control-Max-Age header with this value (in seconds) will be added (default: `0`)
  * @property {RequestCallback|null} handleInitialRequest Function that may handle the request instead, by returning a truthy value (default: `null`)
  * @property {RequestCallback|boolean} isEmptyOriginAllowed Allow requests with no origin if true, or if the function returns true (default: `true`)
+ * @property {RequestCallback|null} checkRateLimit Function that may enforce a rate-limit by returning a non-empty string (default: `null`)
  * @property {ResponseCallback|null} handleResponse Function that may handle the response instead, by returning a truthy value (default: `null`)
  * @property {ResponseCallback|boolean} isAllowedToFollowRedirect Allow redirect following if true, or if the function returns true (default: `true`)
- * @property {CheckRateLimitCallback|null} checkRateLimit Function that may enforce a rate-limit by returning a non-empty string (default: `null`)
  *
  * @typedef {Partial<Options> & Partial<{
  *   originWhitelist: string | Options['originWhitelist'],

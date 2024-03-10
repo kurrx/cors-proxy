@@ -119,6 +119,11 @@ export function normalizeOptions(defaultOptions, options) {
     options.isEmptyOriginAllowed = defaultOptions.isEmptyOriginAllowed
   }
 
+  // Normalize checkRateLimit
+  if (!isFunction(options.checkRateLimit) && options.checkRateLimit !== null) {
+    options.checkRateLimit = defaultOptions.checkRateLimit
+  }
+
   // Normalize handleResponse
   if (!isFunction(options.handleResponse) && options.handleResponse !== null) {
     options.handleResponse = defaultOptions.handleResponse
@@ -127,11 +132,6 @@ export function normalizeOptions(defaultOptions, options) {
   // Normalize isAllowedToFollowRedirect
   if (!isFunction(options.isAllowedToFollowRedirect) && !isBoolean(options.isAllowedToFollowRedirect)) {
     options.isAllowedToFollowRedirect = defaultOptions.isAllowedToFollowRedirect
-  }
-
-  // Normalize checkRateLimit
-  if (!isFunction(options.checkRateLimit) && options.checkRateLimit !== null) {
-    options.checkRateLimit = defaultOptions.checkRateLimit
   }
 
   return options
