@@ -23,14 +23,14 @@
     "proxy",
     "nodejs"
   ],
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "nodemon index.js",
-    "serve": "cross-env NODE_ENV=production node index.js"
+    "start": "nodemon server.js",
+    "serve": "cross-env NODE_ENV=production node server.js"
   },
   "dependencies": {
     "cookie": "^0.6.0",
