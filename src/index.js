@@ -1,3 +1,7 @@
+// © 2013 - 2016 Rob Wu <rob@robwu.nl>
+// © 2024 Kurbanali Ruslan <kurr.eax@gmail.com>
+// Released under the MIT license
+
 import http from 'node:http'
 import createProxy from './proxy.js'
 import getRequestHandler from './handler.js'
