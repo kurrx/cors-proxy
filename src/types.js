@@ -12,7 +12,7 @@
  * @property {URL | null} location Requested URL
  * @property {string} origin Request origin
  * @property {Headers} headers Request headers
- * @property {number} redirectCount_ Number of redirects followed
+ * @property {number} redirectCount Number of redirects followed
  * @property {Options['maxRedirects']} maxRedirects
  * @property {Options['corsMaxAge']} corsMaxAge
  * @property {Options['handleResponse']} handleResponse

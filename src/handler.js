@@ -59,8 +59,8 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
       // Handle redirects within the server, because some clients (e.g. Android Stock Browser)
       // cancel redirects.
       if (allow && [301, 302, 303].includes(statusCode)) {
-        req.proxyState.redirectCount_ = req.proxyState.redirectCount_ + 1 || 1
-        if (req.proxyState.redirectCount_ <= req.proxyState.maxRedirects) {
+        req.proxyState.redirectCount = req.proxyState.redirectCount + 1 || 1
+        if (req.proxyState.redirectCount <= req.proxyState.maxRedirects) {
           req.method = 'GET'
           req.headers['content-length'] = '0'
           delete req.headers['content-type']
@@ -184,7 +184,7 @@ function getRequestHandler(proxy, options) {
     state.location = parseURL(req.url.slice(1))
     state.origin = req.headers.origin || ''
     state.headers = {}
-    state.redirectCount_ = 0
+    state.redirectCount = 0
     state.maxRedirects = maxRedirects
     state.corsMaxAge = corsMaxAge
     state.handleResponse = handleResponse
