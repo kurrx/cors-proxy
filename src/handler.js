@@ -86,6 +86,8 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
     }
   }
 
+  withCORS(proxyRes.headers, req)
+
   // Lifecycle hook
   if (handleResponse && handleResponse(req, res, proxyReq, proxyRes)) {
     return true
@@ -94,7 +96,6 @@ function onProxyResponse(proxy, proxyReq, proxyRes, req, res) {
   // Remove cookies
   delete proxyRes.headers['set-cookie']
 
-  withCORS(proxyRes.headers, req)
   return true
 }
 
