@@ -22,7 +22,7 @@ Main differences between **CORS Proxy** and **CORS Anywhere**:
 - Added [`X-Proxy-*`](#x-proxy--headers) headers
 - Better autocompletion of `createServer()` options types and added descriptions for each option
 
-## Usage
+## Getting Started
 
 ### Installation
 
@@ -41,7 +41,7 @@ npm run start
 cp .env.example .env
 ```
 
-### Configuration
+### Usage
 
 You can edit `server.js` file in root directory to change the way server proxies requests. All available options you can see [here](#options).
 
