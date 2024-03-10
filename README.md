@@ -53,8 +53,6 @@ const server = createServer({
   proxyHttps: process.env.NODE_ENV === 'production',
   originWhitelist: process.env.ORIGIN_WHITELIST?.split(', ') || [],
   originBlacklist: process.env.ORIGIN_BLACKLIST?.split(', ') || [],
-  redirectSameOrigin: true,
-  removeHeaders: ['origin', 'referer'],
 })
 
 const PORT = process.env.PORT || 4001
@@ -75,7 +73,7 @@ Request examples:
 
 #### `IncomingMessageWithProxyState` interface
 
-Extends client `IncomingMessage` request with `proxyState` object. You can access this object with `req.proxyState` (**DO NOT MODIFY THESE OPTIONS, YOU MAY BREAK SOME INTERNAL LOGIC**).
+Extends client `IncomingMessage` request with `proxyState` object. You can access this object with `req.proxyState` (do not modify these options, you may break some internal logic).
 
 ```ts
 interface IncomingMessageWithProxyState extends IncomingMessage {
@@ -88,8 +86,6 @@ interface IncomingMessageWithProxyState extends IncomingMessage {
   }
 }
 ```
-
-Description of each field:
 
 - `proxyBaseUrl` - Base URL of the proxy server. Used to change redirect location to the proxy server.  
   _Example:_ If target responds with 3XX code and with `https://google.com` location header (in case when following redirect is not allowed), then we modify it to `http://localhost:4001/https://google.com`.
