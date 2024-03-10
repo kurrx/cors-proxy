@@ -2,8 +2,6 @@
 
 ## Overview
 
-### Description
-
 **CORS Proxy** is a NodeJS reverse proxy server which adds CORS headers to the proxied request.
 
 This project is a direct derivative work of [**CORS Anywhere**](https://github.com/Rob--W/cors-anywhere).
@@ -12,7 +10,7 @@ The url to proxy is literally taken from the path, validated and proxied. URL is
 
 This package does not put any restrictions on the http methods or headers, except for cookies ([read more](#cookies)). Requesting [user credentials](http://www.w3.org/TR/cors/#user-credentials) is disallowed. The app can be configured to require a header for proxying a request, for example to avoid a direct visit from the browser.
 
-### Motivation
+## Motivation
 
 For most use cases [**CORS Anywhere**](https://github.com/Rob--W/cors-anywhere) provides all functionality you may need. However, I needed to modify the response headers before sending it to a user. If that's what you are looking for, feel free to give it a try!
 
@@ -21,9 +19,10 @@ Main differences between **CORS Proxy** and **CORS Anywhere**:
 - Added `isEmptyOriginAllowed` callback option to identify is it allowed or not to specific request to be proxied if `Origin` header is empty. (eg. when you proxying files that can be opened in browser tab)
 - Added `handleResponse` callback option to modify response before sending it to user.
 - Added `isAllowedToFollowRedirect` callback option to identify is it allowed or not to follow redirects that target sends.
+- Added [`X-Proxy-*`](#x-proxy--headers) headers
 - Better autocompletion of `createServer()` options types and added descriptions for each option
 
-## Example
+## Usage
 
 ### Installation
 
@@ -44,7 +43,7 @@ cp .env.example .env
 
 ### Configuration
 
-You can edit `server.js` file in root directory to change the way server proxies requests. All available [options](#options) listed below.
+You can edit `server.js` file in root directory to change the way server proxies requests. All available options you can see [here](#options).
 
 ```js
 import createServer from './src/index.js'
@@ -66,15 +65,20 @@ server.listen(PORT, () => {
 
 Request examples:
 
-- `http://localhost:4001/http(s)://google.com/any/nesting/supported` - google.com with CORS headers
+- `http://localhost:4001/http(s)://google.com/any/nesting/level` - google.com with CORS headers
+- `http://localhost:4001/http://localhost:8080/` - localhost:8080 with CORS headers
 - `http://localhost:4001/invalid` - Replies 400 Bad Request because `invalid` is not valid URL
 
 ## Documentation
 
 ### Options
 
+#### `IncomingMessageWithProxyState` interface
+
+Extends client `IncomingMessage` request with `proxyState` object. You can access this object with `req.proxyState` (**DO NOT MODIFY THESE OPTIONS, YOU MAY BREAK SOME INTERNAL LOGIC**).
+
 ```ts
-interface Request extends IncomingMessage {
+interface IncomingMessageWithProxyState extends IncomingMessage {
   proxyState: {
     proxyBaseUrl: string
     location: URL | null
@@ -83,9 +87,28 @@ interface Request extends IncomingMessage {
     redirectCount: number
   }
 }
+```
 
-type RequestCallback = (req: Request, res: ServerResponse) => boolean
-type ResponseCallback = (req: Request, res: ServerResponse, proxyReq: IncomingMessage, proxyRes: ServerResponse) => boolean
+Description of each field:
+
+- `proxyBaseUrl` - Base URL of the proxy server. Used to change redirect location to the proxy server.  
+  _Example:_ If target responds with 3XX code and with `https://google.com` location header (in case when following redirect is not allowed), then we modify it to `http://localhost:4001/https://google.com`.
+
+- `location` - Parsed `URL` object of the target url. If url is not valid, then it will be `null`.
+
+- `origin`- origin of the request. If header is not present, then it will be empty string.
+
+- `headers` - Headers that is sent to the target.
+
+- `redirectCount` - Number of redirects followed.
+
+#### `Options` interface
+
+`src/index.js` exports `createServer(options)` function, which creates a server that handles proxy requests. The following options are supported:
+
+```ts
+type RequestCallback = (req: IncomingMessageWithProxyState, res: ServerResponse) => boolean
+type ResponseCallback = (req: IncomingMessageWithProxyState, res: ServerResponse, proxyReq: IncomingMessage, proxyRes: ServerResponse) => boolean
 
 interface Options {
   proxyHttps?: boolean
@@ -106,91 +129,37 @@ interface Options {
 }
 ```
 
-#### `Request` interface
+- `proxyHttps` - TODO (Default: `false`)
 
-Extends initial request `IncomingMessage` with `proxyState` object field. You can access this object with `req.proxyState` (DO NOT MODIFY THESE OPTIONS INSIDE OF CALLBACKS, YOU MAY BREAK SOME INTERNAL LOGIC). Descriptions of each field:
+- `maxRedirects` - Maximum number of redirects to follow (default: `5`)
 
-##### `proxyBaseUrl`
+- `originWhitelist` - If set, requests whose origin is not listed are blocked. If this list is empty, all origins are blocked (default: `[]`)
 
-TODO
+- `originBlacklist` - If set, requests whose origin is listed are blocked (default: `[]`)
 
-##### `location`
+- `redirectSameOrigin` - If true, requests to URLs from the same origin will not be proxied but redirected. The primary purpose for this option is to save server resources by delegating the request to the client (since same-origin requests should always succeed, even without proxying). (default: `false`)
 
-TODO
+- `requireHeaders` - If set, the request must include this header or the API will refuse to proxy. Recommended if you want to prevent users from using the proxy for normal browsing (default: `[]`)
 
-##### `origin`
+- `removeHeaders` - Exclude certain headers from being included in the request (default: `[]`)
 
-TODO
+- `addHeaders` - Set headers for the request (overwrites existing ones, but can be overwritten by [`X-Proxy-*`](#x-proxy--headers) headers) (default: `{}`)
 
-##### `headers`
+- `corsMaxAge` - If set, an Access-Control-Max-Age request header with this value (in seconds) will be added (default: `0`)
 
-TODO
+- `handleInitialRequest` - If set, it is called right after parsing url. If the function returns true, the request will not be handled further. Then the function is responsible for handling the request. This feature can be used to passively monitor requests, for example for logging it should return `false` (default: `null`)
 
-##### `redirectCount`
+- `isEmptyOriginAllowed` - If set as callback, it is called when `Origin` header is empty to decide is it allowed to proxy current request or not (default: `true`)
 
-Number of redirects followed.
+- `checkRateLimit` - You can implement rate limiting here. If this function returns a non-empty string, the request is rejected and the string is send to the client (default: `null`)
 
-#### `Options` interface
+- `handleResponse` - If set, it is called before sending response to the user. If the function returns true, the response will not be sent to the user. Then the function is responsible for handling the response. This feature can be used to add some headers before sending it to user, for example you can set `Content-Disposition` header to make file downloadable from browser if target sends file, in that case you should return `false` (default: `null`)
 
-`src/index.js` exports `createServer(options)` function, which creates a server that handles proxy requests. The following options are supported:
+- `isAllowedToFollowRedirect` - If set as callback, it is called when target responds with 3XX status code to decide to follow redirect or not (default: `true`)
 
-##### `proxyHttps`
+- `httpProxyOptions` - Under the hood, [http-proxy](https://github.com/nodejitsu/node-http-proxy) is used to proxy requests. Use this option if you really need to pass options to http-proxy. The documentation for these options can be found [here](https://github.com/http-party/node-http-proxy#options). (default: `{ xfwd: false }`)
 
-TODO
-
-##### `maxRedirects`
-
-TODO
-
-##### `originWhitelist`
-
-TODO
-
-##### `originBlacklist`
-
-TODO
-
-##### `redirectSameOrigin`
-
-TODO
-
-##### `requireHeaders`
-
-TODO
-
-##### `removeHeaders`
-
-TODO
-
-##### `addHeaders`
-
-TODO
-
-##### `corsMaxAge`
-
-TODO
-
-##### `handleInitialRequest`
-
-TODO
-
-##### `isEmptyOriginAllowed`
-
-TODO
-
-##### `checkRateLimit`
-
-TODO
-
-##### `handleResponse`
-
-TODO
-
-##### `isAllowedToFollowRedirect`
-
-TODO
-
-##### `httpProxyOptions`
+### `X-Proxy-*` headers
 
 TODO
 
