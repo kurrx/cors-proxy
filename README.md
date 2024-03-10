@@ -108,7 +108,12 @@ Description of each field:
 
 ```ts
 type RequestCallback = (req: IncomingMessageWithProxyState, res: ServerResponse) => boolean
-type ResponseCallback = (req: IncomingMessageWithProxyState, res: ServerResponse, proxyReq: IncomingMessage, proxyRes: ServerResponse) => boolean
+type ResponseCallback = (
+  req: IncomingMessageWithProxyState, // Client request
+  res: ServerResponse, // Client response
+  proxyReq: IncomingMessage, // Proxy request
+  proxyRes: ServerResponse, // Proxied response
+) => boolean
 
 interface Options {
   proxyHttps?: boolean
@@ -141,7 +146,7 @@ interface Options {
 
 - `requireHeaders` - If set, the request must include this header or the API will refuse to proxy. Recommended if you want to prevent users from using the proxy for normal browsing (default: `[]`)
 
-- `removeHeaders` - Exclude certain headers from being included in the request (default: `[]`)
+- `removeHeaders` - Exclude certain headers from being included in the request (default: `['cookie']`)
 
 - `addHeaders` - Set headers for the request (overwrites existing ones, but can be overwritten by [`X-Proxy-*`](#x-proxy--headers) headers) (default: `{}`)
 
@@ -161,15 +166,35 @@ interface Options {
 
 ### `X-Proxy-*` headers
 
-TODO
+This feature designed to overwrite browsers list of disallowed headers (eg. setting custom `User-Agent` on browser will throw an error). You can set `X-Proxy-*` headers to overwrite original headers before sending request to the target.
+
+Example: Client is sending request with `User-Agent` header, but target rejects request for some reason. In that case you can set `X-Proxy-User-Agent` header with other value and it will overwrite `User-Agent` header before sending request to the target.
 
 ### Cookies
 
-TODO
+Cookies are not proxied. If the target sets a cookie, it will be deleted from response headers. If the client sends a cookie, it will be deleted from response headers (default of `removeHeaders` option). This is because the server is not intended to be used for normal browsing, and it is not safe to proxy cookies. But there are few workarounds for that:
+
+- You can set `X-Proxy-Cookie` header to overwrite `Cookie` header before sending request to the target.
+- You can use `rewriteCookies()` function that is exported from `src/utils.js` inside of `handleResponse` callback to rewrite cookies before sending response to the user. Basically this function rewrites all `Set-Cookie` headers sent from the target to `X-Proxy-Set-Cookie-{num}` headers and deletes original `Set-Cookie` headers. Where `num` is number from `1` to `X-Proxy-Cookies-Count`. Then you can use `X-Proxy-Set-Cookie-{number}` headers to store cookies on the client side.
+- Use `cookieDomainRewrite` option from `http-proxy` to rewrite cookies domain before sending it to the client:  
+  You also need to comment `delete proxyRes.headers['set-cookie']` inside of `src/handle.js` file to make it work.
+
+I do not recommend to use cookies with this server, but if you really need to use it, then you can use one of the workarounds above.
 
 ### Client
 
-TODO
+To use the API, just prefix the URL with the API URL. You can use like that:
+
+```js
+const corsProxiedApi = axios.create({
+  baseURL: 'http://localhost:4001/https://api.corsless.com/',
+})
+
+// http://localhost:4001/https://corsless.com/endpoint
+corsProxiedApi.get('/endpoint').then(res => {
+  console.log(res.data)
+})
+```
 
 ## License
 
