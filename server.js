@@ -13,7 +13,7 @@ const server = createServer({
   originWhitelist: ORIGIN_WHITELIST,
   originBlacklist: ORIGIN_BLACKLIST,
   redirectSameOrigin: true,
-  removeHeaders: ['origin', 'referer'],
+  removeHeaders: ['cookie', 'origin', 'referer'],
   handleInitialRequest(req) {
     const location = req.proxyState.location
     if (!location) return false

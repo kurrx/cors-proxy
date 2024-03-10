@@ -9,7 +9,7 @@ const defaultOptions = {
   originBlacklist: [],
   redirectSameOrigin: false,
   requireHeaders: [],
-  removeHeaders: [],
+  removeHeaders: ['cookie'],
   addHeaders: {},
   corsMaxAge: 0,
   handleInitialRequest: null,
