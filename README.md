@@ -28,7 +28,7 @@ Main differences between **CORS Proxy** and **CORS Anywhere**:
 
 ```shell
 # Clone git repository
-git clone https://github.com/kurrx/cors-proxy
+git clone https://github.com/kurrx/cors-proxy.git
 cd cors-proxy
 
 # Install dependencies

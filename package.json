@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/kurrx/cors-proxy"
+    "url": "https://github.com/kurrx/cors-proxy.git"
   },
   "bugs": {
     "url": "https://github.com/kurrx/cors-proxy/issues/",
