@@ -34,11 +34,11 @@ cd cors-proxy
 # Install dependencies
 npm install
 
+# Create .env from example, and edit it
+cp .env.example .env
+
 # Start development server
 npm run start
-
-# Create .env from example
-cp .env.example .env
 ```
 
 ### Usage
@@ -103,7 +103,10 @@ interface IncomingMessageWithProxyState extends IncomingMessage {
 `src/index.js` exports `createServer(options)` function, which creates a server that handles proxy requests. The following options are supported:
 
 ```ts
-type RequestCallback = (req: IncomingMessageWithProxyState, res: ServerResponse) => boolean
+type RequestCallback = (
+  req: IncomingMessageWithProxyState,
+  res: ServerResponse,
+) => boolean
 type ResponseCallback = (
   req: IncomingMessageWithProxyState, // Client request
   res: ServerResponse, // Client response
