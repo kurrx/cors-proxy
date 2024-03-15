@@ -133,7 +133,7 @@ interface Options {
 }
 ```
 
-- `proxyHttps` - TODO (Default: `false`)
+- `proxyHttps` - Flag that identifies is proxy served with https or not. Used to configure redirect link to proxy server. Example: Your proxy server domain is `example.com` if flag is set to `true`, then in case of 3XX response from target your redirect link will be `https://example.com/https://target.com` (Default: `false`)
 
 - `maxRedirects` - Maximum number of redirects to follow (default: `5`)
 
