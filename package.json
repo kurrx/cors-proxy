@@ -5,7 +5,7 @@
   "license": "MIT",
   "author": {
     "name": "Kurbanali Ruslan",
-    "email": "kurr.eax@gmail.com",
+    "email": "ruslan@kurr.dev",
     "url": "https://github.com/kurrx"
   },
   "repository": {
@@ -14,7 +14,7 @@
   },
   "bugs": {
     "url": "https://github.com/kurrx/cors-proxy/issues/",
-    "email": "kurr.eax@gmail.com"
+    "email": "ruslan@kurr.dev"
   },
   "keywords": [
     "cors",
