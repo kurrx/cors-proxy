@@ -1,7 +1,7 @@
 {
   "name": "cors-proxy",
   "version": "0.0.2",
-  "description": "CORS Proxy is a NodeJS reverse proxy server which adds CORS headers to the proxied request.",
+  "description": "NodeJS reverse proxy server which adds CORS headers to the proxied request",
   "license": "MIT",
   "author": {
     "name": "Kurbanali Ruslan",

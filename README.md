@@ -16,9 +16,9 @@ For most use cases [**CORS Anywhere**](https://github.com/Rob--W/cors-anywhere) 
 
 Main differences between **CORS Proxy** and **CORS Anywhere**:
 
-- Added `isEmptyOriginAllowed` callback option to identify is it allowed or not to specific request to be proxied if `Origin` header is empty. (eg. when you proxying files that can be opened in browser tab)
+- Added `isEmptyOriginAllowed` callback/boolean option to identify is it allowed or not to specific request to be proxied if `Origin` header is empty. (eg. when you proxying files that can be opened in browser tab)
 - Added `handleResponse` callback option to modify response before sending it to user.
-- Added `isAllowedToFollowRedirect` callback option to identify is it allowed or not to follow redirects that target sends.
+- Added `isAllowedToFollowRedirect` callback/boolean option to identify is it allowed or not to follow redirects that target sends.
 - Added [`X-Proxy-*`](#x-proxy--headers) headers
 - Better autocompletion of `createServer()` options types and added descriptions for each option
 
